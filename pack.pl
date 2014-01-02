@@ -1,6 +1,10 @@
 name(semantria).
 title('Use Semantria natural language API').
 
+requires(func).
+requires(interpolate).
+requires(uri_qq).
+
 version('0.0.1').
 download('http://packs.ndrix.com/semantria/semantria-0.0.1.tgz').
 
