@@ -4,6 +4,7 @@
                      ]).
 
 :- use_module(library(base64), [base64/2]).
+:- use_module(library(condition)).
 :- use_module(library(error), [must_be/2]).
 :- use_module(library(func)).
 :- use_module(library(http/http_header)).  % needed for POST requests
@@ -85,7 +86,10 @@ request_document(Id, Response) :-
 request(Method, Path, Response) :-
     sign_request('~w.json' $ Path, _{}, Url, Auth),
     debug(semantria, "request URL: ~s~n", [Url]),
-    request_open(Method, Url, Auth, Stream),
+    catch( request_open(Method, Url, Auth, Stream)
+         , E
+         , failable_exception(E)
+         ),
     json_read(Stream, Json),
     json_to_dict(Json, Response).
 
@@ -114,6 +118,25 @@ request_open(post(Dict), Url, Auth, Stream) :-
 
 
 eq_dash(K=V,K-V).
+
+
+% convert an exception into a signal which can either fail or rethrow.
+% this is convenient for converting predicates that throw exceptions
+% into predicates that raise signals.
+% maybe it'd be convenient to have call_signal/2 which is like call/1
+% but automatically uses this predicate to convert exceptions into
+% signals.
+failable_exception(E) :-
+    ( signal(E, Restart) ->
+        ( Restart == fail ->
+            fail
+        ; % unexpected restart ->
+            must_be(one_of([fail]), Restart)
+        )
+    ; % signal not handled ->
+        throw(E)
+    ).
+
 
 
 json_to_dict(json(EqPairs), Dict) :-

@@ -1,6 +1,8 @@
 name(semantria).
 title('Use Semantria natural language API').
 
+requires(condition).
+    requires(lambda).  % condition's recursive dependency
 requires(func).
 requires(uri_qq).
 
