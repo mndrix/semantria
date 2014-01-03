@@ -108,7 +108,7 @@ request_open(post(Dict), Url, Auth, Stream) :-
              , Stream
              , [ post(atom(application/json, Json))
                , request_header(authorization=Auth)
-               , status_code(_)
+               , status_code(202)
                ]
              ).
 
