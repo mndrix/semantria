@@ -1,15 +1,19 @@
-:- module(semantria, [ request/3
+:- module(semantria, [ queue_document/2
+                     , retrieve_document/2
+                     , request/3
                      ]).
 
 :- use_module(library(base64), [base64/2]).
+:- use_module(library(error), [must_be/2]).
 :- use_module(library(func)).
+:- use_module(library(http/http_header)).  % needed for POST requests
 :- use_module(library(http/http_open), [http_open/3]).
 :- use_module(library(http/http_ssl_plugin)).
-:- use_module(library(http/json), [json_read/2]).
+:- use_module(library(http/json), [atom_json_term/3, json_read/2]).
 :- use_module(library(interpolate)).
 :- use_module(library(random), [random_between/3]).
 :- use_module(library(readutil), [read_stream_to_codes/2]).
-:- use_module(library(sha), [hmac_sha/4]).
+:- use_module(library(sha), [hash_atom/2, hmac_sha/4, sha_hash/3]).
 :- use_module(library(uri), [uri_encoded/3]).
 :- use_module(library(uri_qq)).
 
@@ -37,25 +41,95 @@
 api_base('https://api35.semantria.com/').
 
 
+%% queue_document(+Document:string, ?Id:string) is det.
+%
+%  Add Document to Semantria's queue for processing. If Id is ground,
+%  use that as the document's Id; otherwise, bind Id to a hash of
+%  Document.
+queue_document(Document, Id0) :-
+    % prepare arguments
+    must_be(string, Document),
+    ( ground(Id0) ->
+        Id=Id0
+    ; % calculate Id ->
+        sha_hash(Document,HashBytes,[]),
+        hash_atom(HashBytes, IdLong),
+        sub_atom(IdLong, 0, 32, _, IdShort),  % 32 char max per API docs
+        atom_string(IdShort, Id)
+    ),
+
+    % submit document to Semantria
+    Details = _{ id: Id, text: Document },
+    request(post(Details), document, _).
+
+
+%% retrieve_document(+Id:string, -Response:dict)
+%
+%  Retrieve a Semantria document.
+retrieve_document(Id, Response) :-
+    request(get, document/Id, Response).
+
+
 %% request(+Method, +Path, Response:dict)
 %
 %  Makes a Method request to Semantria at Path.  For example,
 %
 %      ?- request(get, status, R).
 %      R = semantria{api_version:"3.5", ...} .
+%
+%  For a POST request, make `Method=post(Dict)`. The Dict is converted
+%  into a JSON object and included as the request body.
 request(Method, Path, Response) :-
     sign_request('$Path.json', _{}, Url, Auth),
+    debug(semantria, "request URL: ~s~n", [Url]),
+    request_open(Method, Url, Auth, Stream),
+    json_read(Stream, Json),
+    json_to_dict(Json, Response),
+    is_dict(Response, Path).
+
+request_open(get, Url, Auth, Stream) :-
     http_open( Url
              , Stream
-             , [ method(Method)
+             , [ method(get)
                , request_header(authorization=Auth)
                ]
-             ),
-    json_read(Stream, json(PairsEq)),
-    maplist(eq_dash, PairsEq, Pairs),
-    dict_pairs(Response, Path, Pairs).
+             ).
+request_open(post(Dict), Url, Auth, Stream) :-
+    % convert Dict to JSON
+    dict_pairs(Dict, json, Pairs0),
+    maplist(eq_dash, Pairs, Pairs0),
+    atom_json_term(Json, json(Pairs), [as(atom)]),
+    debug(semantria, "request JSON body: ~s~n", [Json]),
+
+    % POST JSON to Semantria
+    http_open( Url
+             , Stream
+             , [ post(atom(application/json, Json))
+               , request_header(authorization=Auth)
+               , status_code(_)
+               ]
+             ).
+
 
 eq_dash(K=V,K-V).
+
+
+json_to_dict(json(EqPairs), Dict) :-
+    !,
+    maplist(json_pair, EqPairs, DashPairs),
+    dict_pairs(Dict, _, DashPairs).
+json_to_dict(Term, Term).
+
+json_pair(Key=Value0, Key-Value) :-
+    ( atom(Value0) ->
+        atom_string(Value0, Value)
+    ; Value0=json(_) ->
+        json_to_dict(Value0, Value)
+    ; is_list(Value0) ->
+        maplist(json_to_dict, Value0, Value)
+    ; true ->
+        Value = Value0
+    ).
 
 
 % generate the URL and Authorization header that's needed for making
