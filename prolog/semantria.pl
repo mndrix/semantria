@@ -46,21 +46,25 @@ api_base('https://api35.semantria.com/').
 %  Add Document to Semantria's queue for processing. If Id is ground,
 %  use that as the document's Id; otherwise, bind Id to a hash of
 %  Document.
-queue_document(Document, Id0) :-
+queue_document(Document, Id) :-
     % prepare arguments
     must_be(string, Document),
-    ( ground(Id0) ->
-        Id=Id0
-    ; % calculate Id ->
-        sha_hash(Document,HashBytes,[]),
-        hash_atom(HashBytes, IdLong),
-        sub_atom(IdLong, 0, 32, _, IdShort),  % 32 char max per API docs
-        atom_string(IdShort, Id)
-    ),
+    document_id(Document, Id),
 
     % submit document to Semantria
     Details = _{ id: Id, text: Document },
     request(post(Details), document, _).
+
+document_id(_, Id) :-
+    ground(Id),
+    !.
+document_id(Document, Id) :-
+    sha_hash(Document,HashBytes,[]),
+    hash_atom(HashBytes, IdLong),
+    sub_atom(IdLong, 0, 32, _, IdShort),  % 32 char max per API docs
+    atom_string(IdShort, Id).
+
+
 
 
 %% request_document(+Id:string, -Response:dict)
