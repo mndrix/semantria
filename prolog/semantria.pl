@@ -1,5 +1,5 @@
 :- module(semantria, [ queue_document/2
-                     , retrieve_document/2
+                     , request_document/2
                      , request/3
                      ]).
 
@@ -63,10 +63,10 @@ queue_document(Document, Id0) :-
     request(post(Details), document, _).
 
 
-%% retrieve_document(+Id:string, -Response:dict)
+%% request_document(+Id:string, -Response:dict)
 %
-%  Retrieve a Semantria document.
-retrieve_document(Id, Response) :-
+%  Request a Semantria document.
+request_document(Id, Response) :-
     request(get, document/Id, Response).
 
 
