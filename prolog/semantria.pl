@@ -44,12 +44,13 @@ api_base('https://api35.semantria.com/').
 
 %% process_document(+Document:string, -Response:dict)
 %
-%  Queue Document for processing and wait until a Response is available.
-%  Semantria's API is asynchronous so this predicate is a synchronous
-%  convenience. A document ID is generated based on the document's
-%  content. Calling process_document/2 on a document which has already
-%  been processed returns immediately (using results cached on
-%  Semantria's server).
+%  Queue Document for processing and block until a Response is
+%  available. This predicate is a synchronous convenience on
+%  top of Semantria's asynchronous API.
+%  A document ID is generated based on the
+%  document's content. Calling process_document/2 on a document that
+%  has already been processed returns immediately (using results cached
+%  on Semantria's server).
 process_document(Document, Response) :-
     document_id(Document, Id),
     process_document_(Document, Id, 10, Response).
@@ -83,8 +84,9 @@ poll_document(Id, Tries0, Response) :-
 %% queue_document(+Document:string, ?Id:string) is det.
 %
 %  Add Document to Semantria's queue for processing. If Id is ground,
-%  use that as the document's Id; otherwise, bind Id to a hash of
-%  Document.
+%  use that as the document's Id; otherwise, bind Id to a unique
+%  identifier for Document. Generated identifiers are guaranteed to be
+%  stable across invocations.
 queue_document(Document, Id) :-
     % prepare arguments
     must_be(string, Document),
@@ -108,17 +110,20 @@ document_id(Document, Id) :-
 
 %% request_document(+Id:string, -Response:dict)
 %
-%  Request a Semantria document.
+%  Request details about an already-queued document with Id. This
+%  predicate is usually called after calling queue_document/2.
 request_document(Id, Response) :-
     request(get, document/Id, Response).
 
 
 %% request(+Method, +Path, Response:dict)
 %
-%  Makes a Method request to Semantria at Path.  For example,
+%  Low-level predicate for making authenticated API calls. Method
+%  specifies the HTTP method. Path indicates the path. It can be an
+%  atom or a term (like `document/some_document_id`). For example,
 %
 %      ?- request(get, status, R).
-%      R = semantria{api_version:"3.5", ...} .
+%      R = _{api_version:"3.5", ...} .
 %
 %  For a POST request, make `Method=post(Dict)`. The Dict is converted
 %  into a JSON object and included as the request body.

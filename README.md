@@ -1,19 +1,28 @@
 # Synopsis
 
     :- use_module(library(semantria)).
+
+    % provide Semantria API credentials
+    :- multifile semantria:consumer_key/1,
+                 semantria:secret_key_md5/1.
+    semantria:consumer_key("...").
+    semantria:secret_key_md5("...").
+
     main :-
-        % give one motivating example
-        true.
+        process_document("When in the course ...", R),
+        format("Sentiment: ~s~n", [R.sentiment_polarity]).
 
 # Description
 
+A thin wrapper around the [Semantria API](https://semantria.com/) for natural language processing.
+
 # Changes in this Version
 
-  * ...
+  * First public release
 
 # Installation
 
-Using SWI-Prolog 6.3 or later:
+Using SWI-Prolog 7.1 or later:
 
     ?- pack_install(semantria).
 
