@@ -2,7 +2,6 @@ name(semantria).
 title('Use Semantria natural language API').
 
 requires(func).
-requires(interpolate).
 requires(uri_qq).
 
 version('0.0.1').

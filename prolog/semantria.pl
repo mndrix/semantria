@@ -10,7 +10,6 @@
 :- use_module(library(http/http_open), [http_open/3]).
 :- use_module(library(http/http_ssl_plugin)).
 :- use_module(library(http/json), [atom_json_term/3, json_read/2]).
-:- use_module(library(interpolate)).
 :- use_module(library(random), [random_between/3]).
 :- use_module(library(readutil), [read_stream_to_codes/2]).
 :- use_module(library(sha), [hash_atom/2, hmac_sha/4, sha_hash/3]).
@@ -84,12 +83,11 @@ request_document(Id, Response) :-
 %  For a POST request, make `Method=post(Dict)`. The Dict is converted
 %  into a JSON object and included as the request body.
 request(Method, Path, Response) :-
-    sign_request('$Path.json', _{}, Url, Auth),
+    sign_request('~w.json' $ Path, _{}, Url, Auth),
     debug(semantria, "request URL: ~s~n", [Url]),
     request_open(Method, Url, Auth, Stream),
     json_read(Stream, Json),
-    json_to_dict(Json, Response),
-    is_dict(Response, Path).
+    json_to_dict(Json, Response).
 
 request_open(get, Url, Auth, Stream) :-
     http_open( Url
