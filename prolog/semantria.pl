@@ -1,4 +1,5 @@
-:- module(semantria, [ queue_document/2
+:- module(semantria, [ process_document/2
+                     , queue_document/2
                      , request_document/2
                      , request/3
                      ]).
@@ -40,6 +41,44 @@
 % the base URL for all API requests to Semantria
 api_base('https://api35.semantria.com/').
 
+
+%% process_document(+Document:string, -Response:dict)
+%
+%  Queue Document for processing and wait until a Response is available.
+%  Semantria's API is asynchronous so this predicate is a synchronous
+%  convenience. A document ID is generated based on the document's
+%  content. Calling process_document/2 on a document which has already
+%  been processed returns immediately (using results cached on
+%  Semantria's server).
+process_document(Document, Response) :-
+    document_id(Document, Id),
+    process_document_(Document, Id, 10, Response).
+
+process_document_(_, Id, Tries, Response) :-
+    handle( request_document(Id, Response0)
+          , error(_,context(_,status(404,_)))
+          , fail
+          ),
+    !,
+    Status = Response0.status,
+    ( Status == "PROCESSED" ->
+        Response = Response0
+    ; Status == "QUEUED" ->
+        poll_document(Id, Tries, Response)
+    ; Status == "FAILED" ->
+        throw("Semantria document processing failed")
+    ; % otherwise ->
+        must_be(one_of(["PROCESSED","QUEUED","FAILED"]), Status)
+    ).
+process_document_(Document, Id, Tries, Response) :-
+    queue_document(Document, Id),
+    process_document_(Document, Id, Tries, Response).
+
+poll_document(Id, Tries0, Response) :-
+    sleep(1),  % give Semantria a chance to finish its work
+    Tries is Tries0 - 1,
+    ( Tries =< 0 -> throw("Too many retries") ; true ),
+    process_document_(_, Id, Tries, Response).
 
 %% queue_document(+Document:string, ?Id:string) is det.
 %
