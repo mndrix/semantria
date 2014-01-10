@@ -142,6 +142,7 @@ request_open(get, Url, Auth, Stream) :-
              , Stream
              , [ method(get)
                , request_header(authorization=Auth)
+               , cert_verify_hook(ssl_verify)
                ]
              ).
 request_open(post(Dict), Url, Auth, Stream) :-
@@ -157,11 +158,21 @@ request_open(post(Dict), Url, Auth, Stream) :-
              , [ post(atom(application/json, Json))
                , request_header(authorization=Auth)
                , status_code(202)
+               , cert_verify_hook(ssl_verify)
                ]
              ).
 
 
 eq_dash(K=V,K-V).
+
+
+% accept all SSL certificates
+ssl_verify( _SSL
+          , _ProblemCertificate
+          , _AllCertificates
+          , _FirstCertificate
+          , _Error
+          ).
 
 
 % convert an exception into a signal which can either fail or rethrow.
