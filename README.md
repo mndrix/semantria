@@ -18,7 +18,7 @@ A thin wrapper around the [Semantria API](https://semantria.com/) for natural la
 
 # Changes in this Version
 
-  * First public release
+  * Accept Sematria's SSL certificate
 
 # Installation
 
