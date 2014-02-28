@@ -144,7 +144,8 @@ request_open(get, Url, Auth, Stream) :-
                , request_header(authorization=Auth)
                , cert_verify_hook(ssl_verify)
                ]
-             ).
+             ),
+    set_stream(Stream, encoding(utf8)).
 request_open(post(Dict), Url, Auth, Stream) :-
     % convert Dict to JSON
     dict_pairs(Dict, json, Pairs0),
