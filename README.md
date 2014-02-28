@@ -18,7 +18,7 @@ A thin wrapper around the [Semantria API](https://semantria.com/) for natural la
 
 # Changes in this Version
 
-  * Remove accidentally included API keys (oops)
+  * Handle UTF-8 responses
 
 # Installation
 
